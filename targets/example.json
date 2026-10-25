@@ -1,0 +1,7 @@
+{
+  "name": "example",
+  "title": "Product Manager, AI Products — example target",
+  "urls": [],
+  "pastedText": "Paste the job description here, or list posting URLs above (Ashby, Greenhouse and Lever are fetched via their public APIs; other pages are HTML-stripped).",
+  "_note": "Copy this file to targets/<name>.json. Target files are gitignored except this example."
+}

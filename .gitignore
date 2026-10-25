@@ -1,0 +1,78 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+/app/generated/prisma
+.gitnexus
+
+# local dev sqlite + extracted-memory cache. These get rewritten on every
+# server tick; tracking them caused stash/pop cycles to swap the inode
+# out from under the running libSQL connection, producing SQLITE_READONLY.
+dev.db
+dev.db-journal
+dev.db-wal
+dev.db-shm
+prisma/dev.db
+prisma/dev.db-journal
+prisma/dev.db-wal
+prisma/dev.db-shm
+memory.json
+
+# Database backups (contain personal data, never commit)
+*.db.bak
+dev.db.*.bak
+dev.db-journal
+
+# Claude Code runtime
+.claude/scheduled_tasks.lock
+
+# User-uploaded runtime files
+public/uploads/
+
+# Sensitive project docs (keep in vault, not repo)
+audit-*.md
+yc-session-transcript.md
+
+# résumé pipeline outputs + per-user target definitions
+/out/
+/targets/*.json
+!/targets/example.json

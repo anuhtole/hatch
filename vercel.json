@@ -1,0 +1,24 @@
+{
+  "crons": [
+    {
+      "path": "/api/memory/reality-check",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/briefing",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/career-scan",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/career-followups",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/memory",
+      "schedule": "*/10 * * * *"
+    }
+  ]
+}

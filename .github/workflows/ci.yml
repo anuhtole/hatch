@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "file:./dev.db"
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Guard — no hardcoded model strings
+        run: npm run guard:models
+      - name: Guard — email send surface is structurally gated
+        run: npm run guard:send-surface

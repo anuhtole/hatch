@@ -1,0 +1,326 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Account {
+  id           String    @id @default(cuid())
+  label        String    @unique
+  email        String
+  accessToken  String?
+  refreshToken String?
+  tokenExpiry  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Conversation {
+  id               String        @id @default(cuid())
+  title            String        @default("New Chat")
+  favorited        Boolean       @default(false)
+  memoryExtracted  Boolean       @default(false)
+  memoryExcluded   Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  messages         ChatMessage[]
+}
+
+model ChatMessage {
+  id             String        @id @default(cuid())
+  role           String
+  content        String
+  attachments    String?       // JSON array of { id, url }
+  emailDraftId   String?       // durable link to an EmailDraft so the draft/sent card survives reload
+  artifactTarget String?       // B-13: resume target whose verified artifact card renders with this message
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+}
+
+model EmailDraft {
+  id          String    @id @default(cuid())
+  to          String    // JSON array of addresses
+  cc          String?
+  bcc         String?
+  subject     String
+  body        String
+  attachments String?   // JSON array of { source, sourceId, filename }
+  status      String    @default("draft") // "draft" | "sent" | "discarded"
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  sentAt      DateTime?
+}
+
+model KnowledgeDocument {
+  id          String    @id @default(cuid())
+  title       String
+  source      String
+  sourceId    String?
+  sourceUrl   String?
+  content     String
+  summary     String?
+  category    String?
+  courseName  String?
+  fileName    String?
+  fileType    String?
+  fileSize    Int?
+  lastSyncedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Assignment {
+  id               String    @id @default(cuid())
+  canvasId         String    @unique
+  courseId         String
+  courseName       String
+  title            String
+  description      String?
+  dueAt            DateTime?
+  pointsPossible   Float?
+  submissionStatus String?
+  estimatedHours   Float?
+  userCompleted    Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model SyncLog {
+  id              String   @id @default(cuid())
+  source          String
+  status          String
+  documentsFound  Int?
+  message         String?
+  createdAt       DateTime @default(now())
+}
+
+model Tracker {
+  id              String           @id @default(cuid())
+  title           String
+  description     String?
+  category        String?
+  monitorType     String
+  monitorConfig   String
+  currentStatus   String?
+  previousStatus  String?
+  lastChecked     DateTime?
+  lastChanged     DateTime?
+  checkFrequency  String           @default("daily")
+  notifyOnChange  Boolean          @default(true)
+  isActive        Boolean          @default(true)
+  notes           String?
+  color           String           @default("yellow")
+  trackerType     String           @default("binary") // "binary" | "multi_step"
+  stepsConfig     String?          // JSON array of {id, title, description} for multi_step
+  currentStepId   String?
+  summaryLine      String?
+  tailoredMessage  String?
+  lastCheckError   String?
+  lastCheckAttempt DateTime?
+  consecutiveFails Int              @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  history          TrackerHistory[]
+}
+
+model TrackerHistory {
+  id          String   @id @default(cuid())
+  trackerId   String
+  tracker     Tracker  @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  status      String
+  details     String?
+  checkedAt   DateTime @default(now())
+}
+
+model DailyBriefing {
+  id          String    @id @default(cuid())
+  date        String    @unique // YYYY-MM-DD
+  generatedAt DateTime  @default(now())
+  content     String    // JSON blob with all 8 briefing sections
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Todo {
+  id        String    @id @default(cuid())
+  text      String
+  completed Boolean   @default(false)
+  priority  String?   // 'high' | 'medium' | 'low'
+  dueDate   DateTime?
+  notes     String?   // free-text notes/description
+  links     String?   // JSON array of URL strings
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model KnowledgeItem {
+  id          String   @id @default(cuid())
+  source      String   // "vault" | "gmail" | "drive" | "upload" | "canvas" | "downloads" | "conversation_summary"
+  sourceId    String   // original ID at source (file path, gmail message id, drive fileId, etc.)
+  type        String   // "document" | "email" | "note" | "summary" | "image"
+  title       String
+  content     String   // full extracted text (up to ~100KB)
+  contentHash String   // sha256 for dedup
+  metadata    String?  // JSON — varies by source
+  embedding   Bytes?   // float32 array as bytes
+  indexedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@unique([source, sourceId])
+  @@index([source])
+  @@index([contentHash])
+}
+
+model Memory {
+  id         String   @id @default(cuid())
+  category   String   // "person" | "course" | "project" | "preference" | "fact" | "decision"
+  key        String   // structured identifier: "course:NWMEDIA_151AC" or "person:jackson_geiger"
+  value      String   // JSON with structured data
+  confidence Float    @default(1.0)
+  // Trust audit risk #3: when true, the user manually curated this fact
+  // through the Memory modal. The auto-extractor must not overwrite the
+  // value or confidence — only refresh metadata like lastSeenAt.
+  userEdited Boolean  @default(false)
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([category, key])
+  @@index([category])
+}
+
+model IndexingJob {
+  id         String    @id @default(cuid())
+  source     String    // source being indexed
+  status     String    // "pending" | "running" | "completed" | "failed"
+  stats      String?   // JSON: { processed, added, updated, errors }
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  error      String?
+}
+
+model ContactEntry {
+  id          String    @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String?
+  company     String?
+  position    String?
+  school      String?
+  major       String?
+  linkedinUrl String?
+  category    String?
+  subcategory String?
+  tier        Int?
+  enrichedAt  DateTime?
+  rawData     String?
+  connectedOn String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([firstName, lastName, company])
+}
+
+model PipelineCard {
+  id           String          @id @default(cuid())
+  org          String
+  role         String
+  type         String          @default("job")        // "job"|"fellowship"|"research"|"grant"|"policy"
+  status       String          @default("discovered") // "discovered"|"evaluated"|"applied"|"interviewing"|"offer"|"closed"
+  url          String?
+  deadline     String?
+  score        String?
+  notes        String?
+  sourceId     String?  // catalog id (e.g. 'rhodes', 'mats')
+  sourceType   String?  // "chat" | "scan" | "manual"
+  reportPath   String?  // absolute path to career-ops evaluation report
+  archetype    String?  // archetype from evaluation (e.g. "PM at AI labs")
+  tailoredCvPath  String?
+  coverLetterPath String?
+  appliedAt    DateTime?
+  interviewAt  DateTime?
+  offerAt      DateTime?
+  statusReason String?
+  closedAt     DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  events       PipelineEvent[]
+}
+
+model PipelineEvent {
+  id         String      @id @default(cuid())
+  cardId     String
+  card       PipelineCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  type       String      // "applied" | "status_change" | "email_received" | "note_added"
+  fromStatus String?
+  toStatus   String?
+  notes      String?
+  createdAt  DateTime    @default(now())
+}
+
+model OutreachCampaign {
+  id          String            @id @default(cuid())
+  name        String            // e.g. "AI Policy Fellows — Spring 2026"
+  goal        String            // e.g. "fellowship referral" | "job referral" | "informational"
+  status      String            @default("draft") // "draft"|"active"|"paused"|"done"
+  targetOrg   String?
+  targetRole  String?
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  messages    OutreachMessage[]
+}
+
+model OutreachMessage {
+  id           String           @id @default(cuid())
+  campaignId   String
+  campaign     OutreachCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  recipientName  String
+  recipientEmail String
+  recipientTitle String?
+  recipientOrg   String?
+  subject      String
+  body         String
+  status       String           @default("draft") // "draft"|"approved"|"sent"|"replied"|"bounced"
+  sentAt       DateTime?
+  repliedAt    DateTime?
+  followupDue  DateTime?
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model PendingAction {
+  id             String    @id @default(cuid())
+  type           String    // "vault_write" | "memory_write" | "pipeline_add" | "pipeline_update" | "role_apply"
+  payload        String    // JSON-encoded intended write
+  summary        String    // human-readable description shown in the card
+  status         String    @default("pending") // "pending" | "approved" | "discarded"
+  conversationId String?
+  resultSummary  String?   // brief outcome message stored after approve (e.g. "Wrote 412 chars to 00-inbox/cats.md")
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
+
+  @@index([status])
+  @@index([conversationId])
+}
+
+model CareerSuggestion {
+  id          String   @id @default(cuid())
+  category    String   // "skill" | "network" | "content" | "application" | "research"
+  title       String
+  body        String
+  priority    String   @default("medium") // "high" | "medium" | "low"
+  status      String   @default("open")   // "open" | "done" | "dismissed"
+  weekOf      String   // YYYY-WW (ISO week)
+  actionLabel String?  // e.g. "Add to Pipeline", "Draft Email", "Schedule Call"
+  actionMeta  String?  // JSON for action context
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
