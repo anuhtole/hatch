@@ -12,7 +12,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
 
-const REPO = join(process.env.HOME ?? '', 'hatch');
+const REPO = process.cwd();
 const SCAN_DIRS = ['lib', 'app', 'scripts'];
 const ALLOWED = new Set(['lib/models.ts']);
 
