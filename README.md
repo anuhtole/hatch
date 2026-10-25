@@ -42,16 +42,26 @@ Hatch is my answer to that, built and used daily since April 2026. Two design co
 
 ```mermaid
 flowchart LR
-    UI[Next.js App Router UI] -->|NDJSON stream| Chat[/api/chat]
-    Chat --> Claude[Claude · tool-use loop]
-    Claude --> Tools{31 tools}
-    Tools --> Gmail & Cal[Calendar] & Drive & Canvas & Vault[(Obsidian vault)] & KB[(Knowledge base<br/>embeddings)] & Mem[(Memory)]
-    Tools -->|mutating call| PA[(PendingAction)]
-    PA -->|user approves| Exec[Executor]
-    Exec --> Vault & Mem & Pipeline[Career pipeline]
-    Draft[Email draft modal] -->|human click only| Send[Gmail send]
-    Chat -.->|no send tool exists| Send
-    Cron[Cron + instrumentation] --> Brief[Daily briefing] & Extract[Memory extraction] & Track[Tracker checks]
+    UI["Next.js App Router UI"] -->|"NDJSON stream"| Chat["POST api/chat"]
+    Chat --> Claude["Claude · tool-use loop"]
+    Claude --> Tools{"31 tools"}
+    Tools --> Gmail["Gmail"]
+    Tools --> Cal["Calendar"]
+    Tools --> Drive["Drive"]
+    Tools --> Canvas["Canvas LMS"]
+    Tools --> Vault[("Obsidian vault")]
+    Tools --> KB[("Knowledge base + embeddings")]
+    Tools --> Mem[("Memory")]
+    Tools -->|"mutating call"| PA[("PendingAction")]
+    PA -->|"user approves"| Exec["Executor"]
+    Exec --> Vault
+    Exec --> Mem
+    Exec --> Pipeline["Career pipeline"]
+    Draft["Email draft modal"] -->|"human click only"| Send["Gmail send"]
+    Chat -.->|"no send tool exists"| Send
+    Cron["Cron + instrumentation"] --> Brief["Daily briefing"]
+    Cron --> Extract["Memory extraction"]
+    Cron --> Track["Tracker checks"]
 ```
 
 **Stack:** Next.js 16 (App Router), React 19, TypeScript strict, Prisma 7 on SQLite/libSQL, Anthropic SDK, Google APIs, `docx` for rendering. 107 API route handlers, 21 Prisma models, ~47k lines of application TypeScript.
@@ -64,12 +74,12 @@ sequenceDiagram
     participant M as Claude
     participant G as Gate (PendingAction)
     participant X as Executor
-    U->>M: "Save that contact to my vault"
+    U->>M: Save that contact to my vault
     M->>G: save_to_vault(path, content)
-    G-->>U: Inline card: full proposed write, editable
+    G-->>U: Inline card with the full proposed write, editable
     U->>G: Approve
     G->>X: executePendingAction(id, approval)
-    X-->>U: "Wrote 412 chars to memory/people/…"
+    X-->>U: Wrote 412 chars to memory/people/...
 ```
 
 - `lib/pending-actions.ts` is the single executor. Vault writes, memory writes and pipeline updates all route through it.
